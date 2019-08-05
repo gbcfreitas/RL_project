@@ -5,65 +5,79 @@ Created on Sun Jul 28 15:24:31 2019
 @author: gbcfr
 """
 
-from random import randint
-from random import choice
 import numpy as np
+import random as rd
+from step import step
 
+terminal = np.full((1),False)
 
-
-# Defining the step function
-
-def step(s,a):
     
-    if a == 'hit':
-        p_draw = [randint(1,10),choice(['black','red'])]
-        if p_draw[1]=='black':
-            s[0] += p_draw[0]
-        else:
-            s[0] -+ p_draw[0]
-    else:# a = 'stick'
-        while s[1] < 17:
-            d_draw = [randint(1,10),choice(['black','red'])]
-            if d_draw[1]=='black':
-                s[1] += d_draw[0]
-            else:
-                s[1] -= d_draw[0]
-        else:
-            return
+# Question 2
+# Applying Monte-Carlo control
+# No discounting
+
+# Initialization        
+
+pi = np.full((21,10),'hit')
+pi[17:]='stick'
+
+n0 = 100
+ns = np.full((21,10),0)
+nsa = np.full((21,10,2),0)
+alpha = 0
+
+Q = np.full((21,10,2),0)
+V = np.full((21,10),0)
+G = 0
+r = 0
+
+# Start
+
+
+
+episodes = 1000
+
+for i in range(episodes):
+
+    sum_p = rd.randint(1,10)
+    sum_d = rd.randint(1,10)
+    s = [sum_p,sum_d]
+    sp = [sum_p,sum_d]
+    terminal = False
+    G = 0
     
-    return s,a
+    while terminal == False:
+        a = pi[s[0]-1,s[1]-1]
+        ns[s[0]-1,s[1]-1] += 1
+        s, sp, r, terminal = step(s,a,sp)
 
-#Start
+        if a == 'hit':
+            nsa[s[0]-1,s[1]-1,0]+=1
+            G += r
+            alpha = 1/nsa[s[0]-1,s[1]-1,0]
+            Q[s[0]-1,s[1]-1,0] += alpha*(G - Q[s[0]-1,s[1]-1,0])
+        else:
+            nsa[s[0]-1,s[1]-1,1]+=1
+            G += r
+            alpha = 1/nsa[s[0]-1,s[1]-1,1]
+            Q[s[0]-1,s[1]-1,1] += alpha*(G - Q[s[0]-1,s[1]-1,1])
+        
+        s = sp[:]
 
-sum_p = randint(1,10)
-sum_d = randint(1,10)
 
-# policy pi and action-value function q
+    for i, a in np.ndenumerate(pi):
+   
+        epsilon = n0/(n0+ns[i[0],i[1]])
+        if max(Q[i[0],i[1],0],Q[i[0],i[1],1])==Q[i[0],i[1],0]:
+            a = 'hit'
+        else:
+            a = 'stick'
+        
+        pi_new = rd.choices(population=[rd.choice(['hit','stick']),a],weights=[epsilon, (1-epsilon)]) 
+        pi[i] = pi_new[0]
 
-pi = np.full((10,21),'hit')
-pi[:,17:]='stick'
-q = np.full((10,21),0)
-# Current state
-s = [sum_p,sum_d]
-a = pi[sum_d-1,sum_p-1]
 
-step(s,a)
-while a == 'hit':
-    step(s,a)
-       
-if s[0] > 21 or s[0] < 1:
-    r = -1
-elif s[1] > 21 or s[1] < 1:
-    r = +1
-elif s[0] == s[1]:
-    r = 0
-elif s[0] > s[1]:
-    r = +1
-elif s[1] > s[0]:
-    r = -1
 
-q(s,a)= r+=  
-  #  return r
 
 
 
